@@ -1,6 +1,6 @@
 # 🎪 Hajimi King 🏆
 
-人人都是哈基米大王  👑  
+人人都是哈基米大王  👑
 
 注意： 本项目正处于beta期间，所以功能、结构、接口等等都有可能变化，不保证稳定性，请自行承担风险。
 
@@ -261,7 +261,7 @@ AIzaSy in:file
 AizaSy in:file filename:.env
 ```
 
-> 📖 **搜索语法参考**：[GitHub Code Search Syntax](https://docs.github.com/en/search-github/searching-on-github/searching-code) 📚  
+> 📖 **搜索语法参考**：[GitHub Code Search Syntax](https://docs.github.com/en/search-github/searching-on-github/searching-code) 📚
 > 🎯 **核心提示**：创造性的查询表达式是成功的关键，多尝试不同的组合！
 
 ---
@@ -274,4 +274,3 @@ AizaSy in:file filename:.env
 - ✅ 定期检查和清理发现的密钥文件 🧹
 
 💖 **享受使用 Hajimi King 的快乐时光！** 🎉✨🎊
-

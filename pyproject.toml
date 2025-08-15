@@ -20,6 +20,23 @@ dev = [
 ]
 
 [tool.ruff]
+# Exclude patterns
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "*.egg-info",
+    "build",
+    "dist",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+]
+
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
 # Enable specific rule categories
 select = [
     "E",   # pycodestyle errors
@@ -40,32 +57,25 @@ select = [
 ignore = [
     "E501",  # line too long (handled by formatter)
     "UP007", # Use X | Y for type annotations (Python 3.10+ syntax)
+    "ERA001", # eradicate (commented code) - too aggressive for Chinese comments
+    "RET504", # unnecessary assignment before return
+    "SIM117", # nested with statements
+    "SIM105", # contextlib.suppress
+    "SIM112", # capitalized env vars
+    "SIM102", # nested if statements
+    "SIM108", # ternary operators
+    "SIM103", # return condition directly
+    "B007",  # unused loop variables
 ]
 
-# Exclude patterns
-exclude = [
-    ".git",
-    "__pycache__",
-    ".venv",
-    "*.egg-info",
-    "build",
-    "dist",
-    ".mypy_cache",
-    ".pytest_cache",
-    ".ruff_cache",
-]
-
-line-length = 120
-target-version = "py311"
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py files
 
 [tool.ruff.format]
 # Use double quotes for strings
 quote-style = "double"
 # Use spaces around = in keyword arguments
 skip-magic-trailing-comma = false
-
-[tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]  # Allow unused imports in __init__.py files
 
 [tool.ruff.lint.flake8-import-conventions.aliases]
 # Standard library aliases

@@ -5,12 +5,12 @@ from datetime import datetime
 
 from common.Logger import logger
 
-sys.path.append('../')
+sys.path.append("../")
 from common.config import Config
-from utils.github_client import GitHubClient
-from utils.file_manager import file_manager, checkpoint
-from utils.sync_utils import sync_utils
 from utils.async_processor_optimized import OptimizedAsyncProcessor
+from utils.file_manager import checkpoint, file_manager
+from utils.github_client import GitHubClient
+from utils.sync_utils import sync_utils
 
 # 创建GitHub工具实例和文件管理器
 github_utils = GitHubClient.create_instance(Config.GITHUB_TOKENS)
@@ -25,16 +25,16 @@ def normalize_query(query: str) -> str:
         if query[i] == '"':
             end_quote = query.find('"', i + 1)
             if end_quote != -1:
-                parts.append(query[i:end_quote + 1])
+                parts.append(query[i : end_quote + 1])
                 i = end_quote + 1
             else:
                 parts.append(query[i])
                 i += 1
-        elif query[i] == ' ':
+        elif query[i] == " ":
             i += 1
         else:
             start = i
-            while i < len(query) and query[i] != ' ':
+            while i < len(query) and query[i] != " ":
                 i += 1
             parts.append(query[start:i])
 
@@ -47,11 +47,11 @@ def normalize_query(query: str) -> str:
     for part in parts:
         if part.startswith('"') and part.endswith('"'):
             quoted_strings.append(part)
-        elif part.startswith('language:'):
+        elif part.startswith("language:"):
             language_parts.append(part)
-        elif part.startswith('filename:'):
+        elif part.startswith("filename:"):
             filename_parts.append(part)
-        elif part.startswith('path:'):
+        elif part.startswith("path:"):
             path_parts.append(part)
         elif part.strip():
             other_parts.append(part)
@@ -88,7 +88,7 @@ async def async_main():
     # 2.5. 显示SyncUtils状态和队列信息
     if sync_utils.balancer_enabled:
         logger.info("🔗 SyncUtils ready for async key syncing")
-        
+
     # 显示队列状态
     balancer_queue_count = len(checkpoint.wait_send_balancer)
     gpt_load_queue_count = len(checkpoint.wait_send_gpt_load)
@@ -118,11 +118,11 @@ async def async_main():
         file_queue_size=Config.FILE_QUEUE_SIZE,
         key_queue_size=Config.KEY_QUEUE_SIZE,
         enable_work_stealing=Config.ENABLE_WORK_STEALING,
-        enable_smart_load_balancing=Config.ENABLE_SMART_LOAD_BALANCING
+        enable_smart_load_balancing=Config.ENABLE_SMART_LOAD_BALANCING,
     )
-    
+
     await processor.start()
-    
+
     logger.info("✅ System ready - Starting concurrent processing")
     logger.info("=" * 60)
 
@@ -145,23 +145,23 @@ async def async_main():
 
                 # GitHub搜索
                 res = github_utils.search_for_keys(q)
-                
+
                 if res and "items" in res:
                     items = res["items"]
                     if items:
                         logger.info(f"🔍 Query {i}/{len(search_queries)}: 【{q}】 found {len(items)} items")
-                        
+
                         # 将所有items添加到处理队列
                         tasks_added = 0
                         for item in items:
                             # 记录SHA到checkpoint (立即记录避免重复处理)
                             checkpoint.add_scanned_sha(item.get("sha"))
-                            
+
                             # 添加到异步处理队列
                             success = await processor.add_file_task(item, q)
                             if success:
                                 tasks_added += 1
-                                
+
                         loop_tasks_added += tasks_added
                         logger.info(f"📥 Added {tasks_added}/{len(items)} tasks to processing queue")
                     else:
@@ -179,16 +179,22 @@ async def async_main():
                     checkpoint.update_scan_time()
                     file_manager.save_checkpoint(checkpoint)
                     file_manager.update_dynamic_filenames()
-                    
+
                     # 显示处理统计
                     stats = processor.get_optimized_stats()
                     queue_status = processor.get_queue_status()
-                    logger.info(f"📊 Progress - Queries: {total_queries_processed}, Files: {stats['files_downloaded']}, Keys found: {stats['keys_extracted']}, Valid: {stats['valid_keys']}, Rate limited: {stats['rate_limited_keys']}")
-                    logger.info(f"📦 Queue status - File queue: {queue_status['file_queue']['current_size']}, Key queue: {queue_status['key_queue']['current_size']}")
-                    
+                    logger.info(
+                        f"📊 Progress - Queries: {total_queries_processed}, Files: {stats['files_downloaded']}, Keys found: {stats['keys_extracted']}, Valid: {stats['valid_keys']}, Rate limited: {stats['rate_limited_keys']}"
+                    )
+                    logger.info(
+                        f"📦 Queue status - File queue: {queue_status['file_queue']['current_size']}, Key queue: {queue_status['key_queue']['current_size']}"
+                    )
+
                     # 显示优化指标
-                    opt_metrics = stats.get('optimization_metrics', {})
-                    logger.info(f"🎯 Optimization - Backpressure: {opt_metrics.get('backpressure_level', 'UNKNOWN')}, GitHub health: {opt_metrics.get('github_health_score', 0):.2f}, Workers: F{opt_metrics.get('worker_counts', {}).get('file_workers', 0)}/V{opt_metrics.get('worker_counts', {}).get('validation_workers', 0)}")
+                    opt_metrics = stats.get("optimization_metrics", {})
+                    logger.info(
+                        f"🎯 Optimization - Backpressure: {opt_metrics.get('backpressure_level', 'UNKNOWN')}, GitHub health: {opt_metrics.get('github_health_score', 0):.2f}, Workers: F{opt_metrics.get('worker_counts', {}).get('file_workers', 0)}/V{opt_metrics.get('worker_counts', {}).get('validation_workers', 0)}"
+                    )
 
                 # 短暂休息避免API限制
                 if query_count % 3 == 0:
@@ -212,13 +218,13 @@ async def async_main():
             wait_time = 0
             while wait_time < 30:
                 queue_status = processor.get_queue_status()
-                file_queue_size = queue_status['file_queue']['current_size']
-                key_queue_size = queue_status['key_queue']['current_size']
+                file_queue_size = queue_status["file_queue"]["current_size"]
+                key_queue_size = queue_status["key_queue"]["current_size"]
                 if file_queue_size == 0 and key_queue_size == 0:
                     break
                 await asyncio.sleep(1)
                 wait_time += 1
-                
+
                 # 每5秒显示一次队列状态
                 if wait_time % 5 == 0:
                     logger.info(f"📦 Still processing - File queue: {file_queue_size}, Key queue: {key_queue_size}")
@@ -235,29 +241,37 @@ async def async_main():
         # 优雅关闭
         logger.info("🛑 Shutting down...")
         await processor.stop()
-        
+
         checkpoint.update_scan_time()
         file_manager.save_checkpoint(checkpoint)
-        
+
         # 最终统计
         final_stats = processor.get_optimized_stats()
-        logger.info(f"📊 Final stats - Valid keys: {final_stats['valid_keys']}, Rate limited: {final_stats['rate_limited_keys']}")
-        
+        logger.info(
+            f"📊 Final stats - Valid keys: {final_stats['valid_keys']}, Rate limited: {final_stats['rate_limited_keys']}"
+        )
+
         # 显示优化效果总结
-        opt_metrics = final_stats.get('optimization_metrics', {})
+        opt_metrics = final_stats.get("optimization_metrics", {})
         logger.info("🎯 Optimization summary:")
         logger.info(f"   Final backpressure level: {opt_metrics.get('backpressure_level', 'UNKNOWN')}")
         logger.info(f"   GitHub health score: {opt_metrics.get('github_health_score', 0):.2f}")
-        logger.info(f"   Final worker count: {opt_metrics.get('worker_counts', {}).get('file_workers', 0)} file, {opt_metrics.get('worker_counts', {}).get('validation_workers', 0)} validation")
-        
+        logger.info(
+            f"   Final worker count: {opt_metrics.get('worker_counts', {}).get('file_workers', 0)} file, {opt_metrics.get('worker_counts', {}).get('validation_workers', 0)} validation"
+        )
+
         # 显示高级统计（如果可用）
-        if 'work_stealing' in final_stats:
-            ws_stats = final_stats['work_stealing']['steal_stats']
-            logger.info(f"   Work stealing: {ws_stats['total_steals_successful']}/{ws_stats['total_steals_attempted']} successful")
-        
-        if 'load_balancing' in final_stats:
-            lb_stats = final_stats['load_balancing']['global_stats']
-            logger.info(f"   Load balancing: {lb_stats['failover_events']} failovers, {lb_stats['load_redistributions']} rebalances")
+        if "work_stealing" in final_stats:
+            ws_stats = final_stats["work_stealing"]["steal_stats"]
+            logger.info(
+                f"   Work stealing: {ws_stats['total_steals_successful']}/{ws_stats['total_steals_attempted']} successful"
+            )
+
+        if "load_balancing" in final_stats:
+            lb_stats = final_stats["load_balancing"]["global_stats"]
+            logger.info(
+                f"   Load balancing: {lb_stats['failover_events']} failovers, {lb_stats['load_redistributions']} rebalances"
+            )
         logger.info("🔚 Shutting down sync utils...")
         sync_utils.shutdown()
 
@@ -265,6 +279,7 @@ async def async_main():
 def main():
     """主函数 - 启动异步并发模式"""
     asyncio.run(async_main())
+
 
 if __name__ == "__main__":
     main()

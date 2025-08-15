@@ -26,6 +26,25 @@ cp queries.example queries.txt
 # Edit queries.txt to customize search patterns
 ```
 
+### Code Quality & Linting
+```bash
+# Install development dependencies (includes ruff, pylint, pre-commit)
+uv sync --group dev
+
+# Install pre-commit hooks (run once)
+uv run pre-commit install
+
+# Manual linting (fix issues automatically)
+uv run ruff check . --fix
+uv run ruff format .
+
+# Run all pre-commit checks manually
+uv run pre-commit run --all-files
+
+# Quick lint script
+./scripts/lint.sh
+```
+
 ### Docker Commands
 ```bash
 # Build and run with Docker Compose

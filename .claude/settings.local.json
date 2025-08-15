@@ -4,7 +4,8 @@
       "Bash(python:*)",
       "Bash(uv run:*)",
       "Bash(uv add:*)",
-      "Bash(uv sync:*)"
+      "Bash(uv sync:*)",
+      "Bash(PYTHONPATH=. uv run python app/hajimi_king.py)"
     ],
     "deny": []
   }

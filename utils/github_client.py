@@ -1,22 +1,22 @@
 import base64
 import random
 import time
-from typing import Dict, List, Optional, Any
+from typing import Any
 
 import requests
 
-from common.Logger import logger
 from common.config import Config
+from common.Logger import logger
 
 
 class GitHubClient:
     GITHUB_API_URL = "https://api.github.com/search/code"
 
-    def __init__(self, tokens: List[str]):
+    def __init__(self, tokens: list[str]):
         self.tokens = [token.strip() for token in tokens if token.strip()]
         self._token_ptr = 0
 
-    def _next_token(self) -> Optional[str]:
+    def _next_token(self) -> str | None:
         if not self.tokens:
             return None
 
@@ -25,7 +25,7 @@ class GitHubClient:
 
         return token.strip() if isinstance(token, str) else token
 
-    def search_for_keys(self, query: str, max_retries: int = 5) -> Dict[str, Any]:
+    def search_for_keys(self, query: str, max_retries: int = 5) -> dict[str, Any]:
         all_items = []
         total_count = 0
         expected_total = None
@@ -45,28 +45,26 @@ class GitHubClient:
 
                 headers = {
                     "Accept": "application/vnd.github.v3+json",
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36"
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
                 }
 
                 if current_token:
                     current_token = current_token.strip()
                     headers["Authorization"] = f"token {current_token}"
 
-                params = {
-                    "q": query,
-                    "per_page": 100,
-                    "page": page
-                }
+                params = {"q": query, "per_page": 100, "page": page}
 
                 try:
                     total_requests += 1
                     # 获取随机proxy配置
                     proxies = Config.get_random_proxy()
                     if proxies:
-                        response = requests.get(self.GITHUB_API_URL, headers=headers, params=params, timeout=30, proxies=proxies)
+                        response = requests.get(
+                            self.GITHUB_API_URL, headers=headers, params=params, timeout=30, proxies=proxies
+                        )
                     else:
                         response = requests.get(self.GITHUB_API_URL, headers=headers, params=params, timeout=30)
-                    rate_limit_remaining = response.headers.get('X-RateLimit-Remaining')
+                    rate_limit_remaining = response.headers.get("X-RateLimit-Remaining")
                     # 只在剩余次数很少时警告
                     if rate_limit_remaining and int(rate_limit_remaining) < 3:
                         logger.warning(f"⚠️ Rate limit low: {rate_limit_remaining} remaining, token: {current_token}")
@@ -80,26 +78,29 @@ class GitHubClient:
                     failed_requests += 1
                     if status in (403, 429):
                         rate_limit_hits += 1
-                        wait = min(2 ** attempt + random.uniform(0, 1), 60)
+                        wait = min(2**attempt + random.uniform(0, 1), 60)
                         # 只在严重情况下记录详细日志
                         if attempt >= 3:
-                            logger.warning(f"❌ Rate limit hit, status:{status} (attempt {attempt}/{max_retries}) - waiting {wait:.1f}s")
+                            logger.warning(
+                                f"❌ Rate limit hit, status:{status} (attempt {attempt}/{max_retries}) - waiting {wait:.1f}s"
+                            )
                         time.sleep(wait)
                         continue
-                    else:
-                        # 其他HTTP错误，只在最后一次尝试时记录
-                        if attempt == max_retries:
-                            logger.error(f"❌ HTTP {status} error after {max_retries} attempts on page {page}")
-                        time.sleep(2 ** attempt)
-                        continue
+                    # 其他HTTP错误，只在最后一次尝试时记录
+                    if attempt == max_retries:
+                        logger.error(f"❌ HTTP {status} error after {max_retries} attempts on page {page}")
+                    time.sleep(2**attempt)
+                    continue
 
                 except requests.exceptions.RequestException as e:
                     failed_requests += 1
-                    wait = min(2 ** attempt, 30)
+                    wait = min(2**attempt, 30)
 
                     # 只在最后一次尝试时记录网络错误
                     if attempt == max_retries:
-                        logger.error(f"❌ Network error after {max_retries} attempts on page {page}: {type(e).__name__}")
+                        logger.error(
+                            f"❌ Network error after {max_retries} attempts on page {page}: {type(e).__name__}"
+                        )
 
                     time.sleep(wait)
                     continue
@@ -124,8 +125,7 @@ class GitHubClient:
             if current_page_count == 0:
                 if expected_total and len(all_items) < expected_total:
                     continue
-                else:
-                    break
+                break
 
             all_items.extend(items)
 
@@ -134,7 +134,9 @@ class GitHubClient:
 
             if page < 10:
                 sleep_time = random.uniform(0.5, 1.5)
-                logger.info(f"⏳ Processing query: 【{query}】,page {page},item count: {current_page_count},expected total: {expected_total},total count: {total_count},random sleep: {sleep_time:.1f}s")
+                logger.info(
+                    f"⏳ Processing query: 【{query}】,page {page},item count: {current_page_count},expected total: {expected_total},total count: {total_count},random sleep: {sleep_time:.1f}s"
+                )
                 time.sleep(sleep_time)
 
         final_count = len(all_items)
@@ -143,20 +145,24 @@ class GitHubClient:
         if expected_total and final_count < expected_total:
             discrepancy = expected_total - final_count
             if discrepancy > expected_total * 0.1:  # 超过10%数据丢失
-                logger.warning(f"⚠️ Significant data loss: {discrepancy}/{expected_total} items missing ({discrepancy / expected_total * 100:.1f}%)")
+                logger.warning(
+                    f"⚠️ Significant data loss: {discrepancy}/{expected_total} items missing ({discrepancy / expected_total * 100:.1f}%)"
+                )
 
         # 主要成功日志 - 一条日志包含所有关键信息
-        logger.info(f"🔍 GitHub search complete: query:【{query}】 | page success count:{pages_processed} | items count:{final_count}/{expected_total or '?'} | total requests:{total_requests} ")
+        logger.info(
+            f"🔍 GitHub search complete: query:【{query}】 | page success count:{pages_processed} | items count:{final_count}/{expected_total or '?'} | total requests:{total_requests} "
+        )
 
         result = {
             "total_count": total_count,
             "incomplete_results": final_count < expected_total if expected_total else False,
-            "items": all_items
+            "items": all_items,
         }
 
         return result
 
-    def get_file_content(self, item: Dict[str, Any]) -> Optional[str]:
+    def get_file_content(self, item: dict[str, Any]) -> str | None:
         repo_full_name = item["repository"]["full_name"]
         file_path = item["path"]
 
@@ -185,15 +191,15 @@ class GitHubClient:
             # 检查是否有base64编码的内容
             encoding = file_metadata.get("encoding")
             content = file_metadata.get("content")
-            
+
             if encoding == "base64" and content:
                 try:
                     # 解码base64内容
-                    decoded_content = base64.b64decode(content).decode('utf-8')
+                    decoded_content = base64.b64decode(content).decode("utf-8")
                     return decoded_content
                 except Exception as e:
                     logger.warning(f"⚠️ Failed to decode base64 content: {e}, falling back to download_url")
-            
+
             # 如果没有base64内容或解码失败，使用原有的download_url逻辑
             download_url = file_metadata.get("download_url")
             if not download_url:
@@ -213,5 +219,5 @@ class GitHubClient:
             return None
 
     @staticmethod
-    def create_instance(tokens: List[str]) -> 'GitHubClient':
+    def create_instance(tokens: list[str]) -> "GitHubClient":
         return GitHubClient(tokens)

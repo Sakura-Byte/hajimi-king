@@ -56,16 +56,16 @@ print_banner() {
 # 检查源码目录
 check_source_directory() {
     log_info "检查源码目录..."
-    
+
     local required_files=("Dockerfile" "app/hajimi_king.py" "env.example" "queries.example")
     local missing_files=()
-    
+
     for file in "${required_files[@]}"; do
         if [[ ! -f "${SOURCE_DIR}/$file" ]]; then
             missing_files+=("$file")
         fi
     done
-    
+
     if [[ ${#missing_files[@]} -ne 0 ]]; then
         log_error "hajimi-king源码目录缺少必要文件:"
         printf '%s\n' "${missing_files[@]}" | sed 's/^/  - /'
@@ -73,36 +73,36 @@ check_source_directory() {
         log_error "预期源码路径: ${SOURCE_DIR}"
         exit 1
     fi
-    
+
     log_success "源码目录检查通过"
 }
 
 # 检查Docker环境
 check_docker() {
     log_info "检查Docker环境..."
-    
+
     if ! command -v docker &> /dev/null; then
         log_error "Docker未安装，请先安装Docker"
         exit 1
     fi
-    
+
     if ! command -v docker-compose &> /dev/null; then
         log_error "Docker Compose未安装，请先安装Docker Compose"
         exit 1
     fi
-    
+
     if ! docker info &> /dev/null; then
         log_error "Docker守护进程未运行，请启动Docker"
         exit 1
     fi
-    
+
     log_success "Docker环境检查通过"
 }
 
 # 创建部署目录结构
 setup_deploy_directory() {
     log_info "设置部署目录结构..."
-    
+
     # 1. 创建data文件夹（如果不存在）
     if [[ ! -d "${DEPLOY_DIR}/data" ]]; then
         mkdir -p "${DEPLOY_DIR}/data"
@@ -110,7 +110,7 @@ setup_deploy_directory() {
     else
         log_info "data目录已存在: ${DEPLOY_DIR}/data"
     fi
-    
+
     # 2. 复制env.example到当前目录为.env（如果不存在）
     if [[ ! -f "${DEPLOY_DIR}/.env" ]]; then
         cp "${SOURCE_DIR}/env.example" "${DEPLOY_DIR}/.env"
@@ -118,7 +118,7 @@ setup_deploy_directory() {
     else
         log_info "配置文件已存在: .env"
     fi
-    
+
     # 3. 复制queries.example到data/queries.txt（如果不存在）
     if [[ ! -f "${DEPLOY_DIR}/data/queries.txt" ]]; then
         cp "${SOURCE_DIR}/queries.example" "${DEPLOY_DIR}/data/queries.txt"
@@ -126,7 +126,7 @@ setup_deploy_directory() {
     else
         log_info "查询文件已存在: data/queries.txt"
     fi
-    
+
     # 5. 复制docker-compose文件到当前目录
     cp "${SOURCE_DIR}/docker-compose.yml" "${DEPLOY_DIR}/${COMPOSE_FILE}"
     log_success "复制Docker Compose配置: ${COMPOSE_FILE}"
@@ -135,10 +135,10 @@ setup_deploy_directory() {
 # 检查并配置GitHub Token
 configure_github_token() {
     log_info "检查GitHub Token配置..."
-    
+
     local env_file="${DEPLOY_DIR}/.env"
     local github_tokens=$(grep "^GITHUB_TOKENS=" "$env_file" 2>/dev/null | cut -d'=' -f2- | tr -d '"' | tr -d "'" || echo "")
-    
+
     # 检查是否包含实际的token（不是示例值）
     if [[ -z "$github_tokens" ]] || [[ "$github_tokens" == "ghp_your_token_here_1,ghp_your_token_here_2" ]] || [[ "$github_tokens" =~ ghp_your_token_here ]]; then
         log_warning "未检测到有效的GitHub Token"
@@ -148,15 +148,15 @@ configure_github_token() {
         echo "- 创建token: https://github.com/settings/tokens"
         echo "- 需要 'public_repo' 权限"
         echo ""
-        
+
         while true; do
             read -p "GitHub Token(s): " -r user_tokens
-            
+
             if [[ -z "$user_tokens" ]]; then
                 log_error "GitHub Token不能为空，请重新输入"
                 continue
             fi
-            
+
             # 简单验证token格式（以ghp_开头）
             if [[ ! "$user_tokens" =~ ^ghp_ ]]; then
                 log_warning "Token格式可能不正确（应以ghp_开头），是否继续？(y/N)"
@@ -165,7 +165,7 @@ configure_github_token() {
                     continue
                 fi
             fi
-            
+
             # 更新.env文件中的GITHUB_TOKENS
             if grep -q "^GITHUB_TOKENS=" "$env_file"; then
                 # 使用sed替换现有行，处理特殊字符
@@ -174,7 +174,7 @@ configure_github_token() {
                 # 添加新行
                 echo "GITHUB_TOKENS=${user_tokens}" >> "$env_file"
             fi
-            
+
             log_success "GitHub Token已保存到.env文件"
             break
         done
@@ -189,20 +189,20 @@ configure_github_token() {
 # 构建Docker镜像
 build_image() {
     log_info "在源码目录构建Docker镜像: ${IMAGE_NAME}"
-    
+
     # 切换到源码目录进行构建
     cd "${SOURCE_DIR}"
-    
+
     if docker build -t "${IMAGE_NAME}" .; then
         log_success "Docker镜像构建成功: ${IMAGE_NAME}"
     else
         log_error "Docker镜像构建失败"
         exit 1
     fi
-    
+
     # 切换回部署目录
     cd "${DEPLOY_DIR}"
-    
+
     # 显示镜像信息
     log_info "镜像信息:"
     docker images "${PROJECT_NAME}" | head -2
@@ -211,20 +211,20 @@ build_image() {
 # 启动服务
 start_services() {
     log_info "在部署目录启动Docker Compose服务..."
-    
+
     # 确保在部署目录
     cd "${DEPLOY_DIR}"
-    
+
     if docker-compose -f "$COMPOSE_FILE" up -d; then
         log_success "服务启动成功"
     else
         log_error "服务启动失败"
         exit 1
     fi
-    
+
     # 等待容器启动
     sleep 3
-    
+
     # 显示服务状态
     log_info "服务状态:"
     docker-compose -f "$COMPOSE_FILE" ps
@@ -233,9 +233,9 @@ start_services() {
 # 停止并清理现有容器
 cleanup_existing() {
     log_info "清理现有容器..."
-    
+
     cd "${DEPLOY_DIR}"
-    
+
     if [[ -f "$COMPOSE_FILE" ]] && docker-compose -f "$COMPOSE_FILE" ps -q 2>/dev/null | grep -q .; then
         log_warning "发现运行中的容器，正在停止..."
         docker-compose -f "$COMPOSE_FILE" down
@@ -267,10 +267,10 @@ main() {
     echo ""
     log_info "💡 管理命令:"
     echo "  docker-compose logs -f     - 查看实时日志"
-    echo "  docker-compose ps          - 查看服务状态"  
+    echo "  docker-compose ps          - 查看服务状态"
     echo "  docker-compose down        - 停止服务"
     echo "  docker-compose up -d       - 重启服务"
 }
 
 # 执行主函数
-main 
+main
