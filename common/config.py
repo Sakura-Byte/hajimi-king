@@ -152,7 +152,7 @@ class Config:
             if not cls.GEMINI_BALANCER_AUTH or not cls.GEMINI_BALANCER_URL:
                 logger.warning("⚠️ Gemini Balancer Auth or URL Missing (Balancer功能将被禁用)")
             else:
-                logger.info(f"✅ Gemini Balancer Auth: ****")
+                logger.info("✅ Gemini Balancer Auth: ****")
         else:
             logger.info("ℹ️ Gemini Balancer URL: Not configured (Balancer功能将被禁用)")
 
@@ -162,7 +162,7 @@ class Config:
             if not cls.GPT_LOAD_AUTH or not cls.GPT_LOAD_URL or not cls.GPT_LOAD_GROUP_NAME:
                 logger.warning("⚠️ GPT Load Balancer Auth, URL or Group Name Missing (Load Balancer功能将被禁用)")
             else:
-                logger.info(f"✅ GPT Load Balancer Auth: ****")
+                logger.info("✅ GPT Load Balancer Auth: ****")
                 logger.info(f"✅ GPT Load Balancer Group Name: {cls.GPT_LOAD_GROUP_NAME}")
         else:
             logger.info("ℹ️ GPT Load Balancer: Not configured (Load Balancer功能将被禁用)")
@@ -176,7 +176,7 @@ class Config:
         return True
 
 
-logger.info(f"*" * 30 + " CONFIG START " + "*" * 30)
+logger.info("*" * 30 + " CONFIG START " + "*" * 30)
 logger.info(f"GITHUB_TOKENS: {len(Config.GITHUB_TOKENS)} tokens")
 logger.info(f"DATA_PATH: {Config.DATA_PATH}")
 logger.info(f"PROXY_LIST: {len(Config.PROXY_LIST)} proxies configured")
@@ -198,7 +198,7 @@ logger.info(f"QUERIES_FILE: {Config.QUERIES_FILE}")
 logger.info(f"SCANNED_SHAS_FILE: {Config.SCANNED_SHAS_FILE}")
 logger.info(f"HAJIMI_CHECK_MODEL: {Config.HAJIMI_CHECK_MODEL}")
 logger.info(f"FILE_PATH_BLACKLIST: {len(Config.FILE_PATH_BLACKLIST)} items")
-logger.info(f"--- CONCURRENCY OPTIMIZATIONS ---")
+logger.info("--- CONCURRENCY OPTIMIZATIONS ---")
 logger.info(f"ENABLE_WORK_STEALING: {Config.ENABLE_WORK_STEALING}")
 logger.info(f"ENABLE_SMART_LOAD_BALANCING: {Config.ENABLE_SMART_LOAD_BALANCING}")
 logger.info(f"ENABLE_BACKPRESSURE_CONTROL: {Config.ENABLE_BACKPRESSURE_CONTROL}")
@@ -207,7 +207,7 @@ logger.info(f"FILE_WORKERS_RANGE: {Config.MIN_FILE_WORKERS_PER_TOKEN}-{Config.MA
 logger.info(f"VALIDATION_WORKERS_RANGE: {Config.MIN_VALIDATION_WORKERS}-{Config.MAX_VALIDATION_WORKERS}")
 logger.info(f"QUEUE_SIZES: File={Config.FILE_QUEUE_SIZE}, Key={Config.KEY_QUEUE_SIZE}")
 logger.info(f"QUOTA_THRESHOLDS: Warning={Config.GITHUB_QUOTA_WARNING_THRESHOLD}%, Critical={Config.GITHUB_QUOTA_CRITICAL_THRESHOLD}%")
-logger.info(f"*" * 30 + " CONFIG END " + "*" * 30)
+logger.info("*" * 30 + " CONFIG END " + "*" * 30)
 
 # 创建全局配置实例
 config = Config()

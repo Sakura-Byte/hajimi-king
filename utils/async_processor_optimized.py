@@ -7,7 +7,7 @@ import asyncio
 import random
 import time
 from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 import aiohttp
@@ -16,14 +16,14 @@ from google.api_core import exceptions as google_exceptions
 
 from common.Logger import logger
 from common.config import Config
-from utils.file_manager import file_manager, checkpoint
+from utils.file_manager import file_manager
 from utils.sync_utils import sync_utils
 
 # 导入新的并发优化组件
 from .rate_limit.quota_monitor import QuotaMonitor
 from .rate_limit.token_manager import TokenManager  
 from .rate_limit.backpressure_rl import RateLimitBackpressure
-from .rate_limit.adaptive_scheduler import AdaptiveScheduler, ScheduledTask, TaskType
+from .rate_limit.adaptive_scheduler import AdaptiveScheduler, TaskType
 from .rate_limit.priority_queue import (
     QuotaAwarePriorityQueue, FileTaskInfo, KeyValidationTaskInfo, 
     PriorityCalculator
@@ -113,7 +113,7 @@ class OptimizedAsyncProcessor:
         self.monitoring_task: Optional[asyncio.Task] = None
         self.rebalancing_task: Optional[asyncio.Task] = None
         
-        logger.info(f"🚀 OptimizedAsyncProcessor initialized")
+        logger.info("🚀 OptimizedAsyncProcessor initialized")
         logger.info(f"   📊 Max workers: {max_file_workers} file, {max_validation_workers} validation")
         logger.info(f"   🎯 Work stealing: {enable_work_stealing}")
         logger.info(f"   ⚖️ Smart load balancing: {enable_smart_load_balancing}")
@@ -142,7 +142,7 @@ class OptimizedAsyncProcessor:
         self.is_running = True
         self.stats.reset()
         
-        logger.info(f"✅ OptimizedAsyncProcessor started")
+        logger.info("✅ OptimizedAsyncProcessor started")
 
     async def stop(self):
         """停止异步处理器"""
@@ -282,7 +282,7 @@ class OptimizedAsyncProcessor:
                 # 处理任务
                 start_time = time.time()
                 await self._process_file_task_optimized(task_data, worker_id)
-                execution_time = time.time() - start_time
+                time.time() - start_time
                 
                 # 记录完成
                 if self.work_stealing_scheduler:
@@ -331,7 +331,7 @@ class OptimizedAsyncProcessor:
                 # 处理任务
                 start_time = time.time()
                 await self._process_validation_task_optimized(task_data, worker_id)
-                execution_time = time.time() - start_time
+                time.time() - start_time
                 
                 # 记录完成
                 if self.work_stealing_scheduler:
@@ -349,7 +349,7 @@ class OptimizedAsyncProcessor:
     async def _process_file_task_optimized(self, task_data: Dict, worker_id: str):
         """优化的文件任务处理"""
         item = task_data['item']
-        query = task_data['query']
+        task_data['query']
         
         # 检查是否应该跳过
         if self._should_skip_item(item):
@@ -546,7 +546,7 @@ class OptimizedAsyncProcessor:
             
             # 发送测试请求
             model = genai.GenerativeModel(Config.HAJIMI_CHECK_MODEL)
-            response = model.generate_content("hi")
+            model.generate_content("hi")
             return "ok"
             
         except (google_exceptions.PermissionDenied, google_exceptions.Unauthenticated):

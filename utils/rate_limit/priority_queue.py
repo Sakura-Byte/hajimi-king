@@ -12,7 +12,6 @@ import heapq
 from datetime import datetime
 
 from common.Logger import logger
-from common.config import Config
 
 
 class TaskPriority(Enum):
@@ -79,7 +78,7 @@ class FileTaskInfo:
                 return 0.4
             else:
                 return 0.2
-        except:
+        except (ValueError, TypeError, KeyError):
             return 0.5  # 默认分数
     
     @property

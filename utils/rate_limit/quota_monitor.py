@@ -3,13 +3,9 @@ API配额监控模块
 实时监控GitHub API和Gemini API的配额使用情况
 """
 
-import asyncio
 import time
-from typing import Dict, List, Optional, NamedTuple
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-import aiohttp
-import requests
+from typing import Dict, Optional
+from dataclasses import dataclass
 
 from common.Logger import logger
 from common.config import Config

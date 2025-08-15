@@ -3,10 +3,8 @@
 基于API配额和系统状态智能调度任务
 """
 
-import asyncio
-import random
 import time
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 import heapq
@@ -15,7 +13,7 @@ from collections import defaultdict
 from common.Logger import logger
 from .quota_monitor import QuotaMonitor
 from .token_manager import TokenManager
-from .backpressure_rl import RateLimitBackpressure, BackpressureLevel
+from .backpressure_rl import RateLimitBackpressure
 
 
 class TaskType(Enum):

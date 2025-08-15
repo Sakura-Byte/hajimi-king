@@ -3,10 +3,8 @@ Token感知的工作窃取算法
 实现基于API token约束的工作窃取调度，优化worker利用率
 """
 
-import asyncio
-import random
 import time
-from typing import Dict, List, Optional, Set, Tuple, Any
+from typing import Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 from collections import deque, defaultdict

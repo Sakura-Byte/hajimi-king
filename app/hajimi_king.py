@@ -1,16 +1,14 @@
 import asyncio
-import os
 import sys
 import traceback
-from datetime import datetime, timedelta
-from typing import Dict, List, Any
+from datetime import datetime
 
 from common.Logger import logger
 
 sys.path.append('../')
 from common.config import Config
 from utils.github_client import GitHubClient
-from utils.file_manager import file_manager, Checkpoint, checkpoint
+from utils.file_manager import file_manager, checkpoint
 from utils.sync_utils import sync_utils
 from utils.async_processor_optimized import OptimizedAsyncProcessor
 
@@ -106,12 +104,12 @@ async def async_main():
         logger.info(f"🌐 Proxy: {len(Config.PROXY_LIST)} proxies configured")
 
     if checkpoint.last_scan_time:
-        logger.info(f"💾 Checkpoint found - Incremental scan mode")
+        logger.info("💾 Checkpoint found - Incremental scan mode")
         logger.info(f"   Last scan: {checkpoint.last_scan_time}")
         logger.info(f"   Scanned files: {len(checkpoint.scanned_shas)}")
         logger.info(f"   Processed queries: {len(checkpoint.processed_queries)}")
     else:
-        logger.info(f"💾 No checkpoint - Full scan mode")
+        logger.info("💾 No checkpoint - Full scan mode")
 
     # 4. 创建并启动优化的异步处理器
     processor = OptimizedAsyncProcessor(
@@ -225,7 +223,7 @@ async def async_main():
                 if wait_time % 5 == 0:
                     logger.info(f"📦 Still processing - File queue: {file_queue_size}, Key queue: {key_queue_size}")
 
-            logger.info(f"💤 Sleeping for 10 seconds before next loop...")
+            logger.info("💤 Sleeping for 10 seconds before next loop...")
             await asyncio.sleep(10)
 
     except KeyboardInterrupt:
@@ -247,7 +245,7 @@ async def async_main():
         
         # 显示优化效果总结
         opt_metrics = final_stats.get('optimization_metrics', {})
-        logger.info(f"🎯 Optimization summary:")
+        logger.info("🎯 Optimization summary:")
         logger.info(f"   Final backpressure level: {opt_metrics.get('backpressure_level', 'UNKNOWN')}")
         logger.info(f"   GitHub health score: {opt_metrics.get('github_health_score', 0):.2f}")
         logger.info(f"   Final worker count: {opt_metrics.get('worker_counts', {}).get('file_workers', 0)} file, {opt_metrics.get('worker_counts', {}).get('validation_workers', 0)} validation")

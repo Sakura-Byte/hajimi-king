@@ -426,7 +426,7 @@ class SyncUtils:
     def _batch_send_worker(self) -> None:
         """批量发送worker"""
         while self.saving_checkpoint:
-            logger.info(f"📥 Checkpoint is currently being saving, waiting before batch sending...")
+            logger.info("📥 Checkpoint is currently being saving, waiting before batch sending...")
             time.sleep(0.5)
 
         self.saving_checkpoint = True

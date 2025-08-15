@@ -3,11 +3,9 @@
 综合管理GitHub tokens、proxies和Gemini API的智能分配和负载均衡
 """
 
-import asyncio
 import random
 import time
-import math
-from typing import Dict, List, Optional, Tuple, Any, NamedTuple
+from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from enum import Enum
 from collections import defaultdict, deque
@@ -78,12 +76,7 @@ class PredictiveLoadBalancer:
         self.performance_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=100))
         self.latency_history: Dict[str, deque] = defaultdict(lambda: deque(maxlen=50))
         
-        # 负载均衡策略
-        self.balance_strategies = {
-            ResourceType.GITHUB_TOKEN: self._balance_github_tokens,
-            ResourceType.PROXY: self._balance_proxies,
-            ResourceType.GEMINI_KEY: self._balance_gemini_keys
-        }
+        # 负载均衡策略 (未使用，已移除)
         
         # 预测模型参数
         self.prediction_window = 300  # 5分钟预测窗口

@@ -5,7 +5,6 @@
 
 import asyncio
 import random
-import time
 from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -377,7 +376,7 @@ class AsyncProcessor:
             
             # 发送测试请求
             model = genai.GenerativeModel(Config.HAJIMI_CHECK_MODEL)
-            response = model.generate_content("hi")
+            model.generate_content("hi")
             return "ok"
             
         except (google_exceptions.PermissionDenied, google_exceptions.Unauthenticated):

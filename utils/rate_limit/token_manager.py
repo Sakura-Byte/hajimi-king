@@ -5,9 +5,9 @@ Token管理模块
 
 import random
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 from dataclasses import dataclass
-from collections import defaultdict, deque
+from collections import deque
 
 from common.Logger import logger
 from common.config import Config
