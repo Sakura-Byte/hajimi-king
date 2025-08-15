@@ -166,13 +166,14 @@ async def async_main():
                         logger.info(f"📥 Added {tasks_added}/{len(items)} tasks to processing queue")
                     else:
                         logger.info(f"📭 Query {i}/{len(search_queries)} - No items found")
-                else:
-                    logger.warning(f"❌ Query {i}/{len(search_queries)} failed")
 
-                # 标记查询为已处理
-                checkpoint.add_processed_query(normalized_q)
-                query_count += 1
-                total_queries_processed += 1
+                    # Only mark query as processed when search succeeds
+                    checkpoint.add_processed_query(normalized_q)
+                    query_count += 1
+                    total_queries_processed += 1
+                else:
+                    logger.warning(f"❌ Query {i}/{len(search_queries)} failed - will retry in next loop")
+                    # Don't mark as processed, don't increment counters
 
                 # 定期保存checkpoint
                 if query_count % 5 == 0:
