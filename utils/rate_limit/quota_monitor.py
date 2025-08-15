@@ -87,8 +87,8 @@ class QuotaMonitor:
         self.gemini_last_429 = None
         
         # 监控配置
-        self.github_warning_threshold = float(Config.parse_bool(getattr(Config, 'GITHUB_QUOTA_WARNING_THRESHOLD', '30'))) / 100
-        self.github_critical_threshold = float(Config.parse_bool(getattr(Config, 'GITHUB_QUOTA_CRITICAL_THRESHOLD', '10'))) / 100
+        self.github_warning_threshold = float(getattr(Config, 'GITHUB_QUOTA_WARNING_THRESHOLD', 30)) / 100
+        self.github_critical_threshold = float(getattr(Config, 'GITHUB_QUOTA_CRITICAL_THRESHOLD', 10)) / 100
         
         # 初始化token状态
         for token in self.github_tokens:

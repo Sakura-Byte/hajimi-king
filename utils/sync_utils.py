@@ -8,7 +8,7 @@ from typing import List, Dict, Optional
 import requests
 
 from common.Logger import logger
-from common.config import Config
+from common.config import Config, parse_bool
 from utils.file_manager import file_manager, checkpoint
 
 
@@ -20,7 +20,7 @@ class SyncUtils:
         # Gemini Balancer 配置
         self.balancer_url = Config.GEMINI_BALANCER_URL.rstrip('/') if Config.GEMINI_BALANCER_URL else ""
         self.balancer_auth = Config.GEMINI_BALANCER_AUTH
-        self.balancer_sync_enabled = Config.parse_bool(Config.GEMINI_BALANCER_SYNC_ENABLED)
+        self.balancer_sync_enabled = parse_bool(Config.GEMINI_BALANCER_SYNC_ENABLED)
         self.balancer_enabled = bool(self.balancer_url and self.balancer_auth and self.balancer_sync_enabled)
 
         # GPT Load Balancer 配置
@@ -28,7 +28,7 @@ class SyncUtils:
         self.gpt_load_auth = Config.GPT_LOAD_AUTH
         # 解析多个group names (逗号分隔)
         self.gpt_load_group_names = [name.strip() for name in Config.GPT_LOAD_GROUP_NAME.split(',') if name.strip()] if Config.GPT_LOAD_GROUP_NAME else []
-        self.gpt_load_sync_enabled = Config.parse_bool(Config.GPT_LOAD_SYNC_ENABLED)
+        self.gpt_load_sync_enabled = parse_bool(Config.GPT_LOAD_SYNC_ENABLED)
         self.gpt_load_enabled = bool(self.gpt_load_url and self.gpt_load_auth and self.gpt_load_group_names and self.gpt_load_sync_enabled)
 
         # 创建线程池用于异步执行
