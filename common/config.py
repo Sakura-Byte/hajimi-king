@@ -10,6 +10,30 @@ from common.Logger import logger
 load_dotenv(override=False)
 
 
+# Helper function for parsing boolean values
+def parse_bool(value: str) -> bool:
+    """
+    解析布尔值配置，支持多种格式
+    
+    Args:
+        value: 配置值字符串
+        
+    Returns:
+        bool: 解析后的布尔值
+    """
+    if isinstance(value, bool):
+        return value
+    
+    if isinstance(value, str):
+        value = value.strip().lower()
+        return value in ('true', '1', 'yes', 'on', 'enabled')
+    
+    if isinstance(value, int):
+        return bool(value)
+    
+    return False
+
+
 class Config:
     GITHUB_TOKENS_STR = os.getenv("GITHUB_TOKENS", "")
 
@@ -84,29 +108,6 @@ class Config:
     FILE_PATH_BLACKLIST = [token.strip().lower() for token in FILE_PATH_BLACKLIST_STR.split(',') if token.strip()]
 
     @classmethod
-    def parse_bool(cls, value: str) -> bool:
-        """
-        解析布尔值配置，支持多种格式
-        
-        Args:
-            value: 配置值字符串
-            
-        Returns:
-            bool: 解析后的布尔值
-        """
-        if isinstance(value, bool):
-            return value
-        
-        if isinstance(value, str):
-            value = value.strip().lower()
-            return value in ('true', '1', 'yes', 'on', 'enabled')
-        
-        if isinstance(value, int):
-            return bool(value)
-        
-        return False
-
-    @classmethod
     def get_random_proxy(cls) -> Optional[Dict[str, str]]:
         """
         随机获取一个代理配置
@@ -156,7 +157,7 @@ class Config:
             logger.info("ℹ️ Gemini Balancer URL: Not configured (Balancer功能将被禁用)")
 
         # 检查GPT Load Balancer配置
-        if cls.parse_bool(cls.GPT_LOAD_SYNC_ENABLED):
+        if parse_bool(cls.GPT_LOAD_SYNC_ENABLED):
             logger.info(f"✅ GPT Load Balancer enabled, URL: {cls.GPT_LOAD_URL}")
             if not cls.GPT_LOAD_AUTH or not cls.GPT_LOAD_URL or not cls.GPT_LOAD_GROUP_NAME:
                 logger.warning("⚠️ GPT Load Balancer Auth, URL or Group Name Missing (Load Balancer功能将被禁用)")
@@ -181,8 +182,8 @@ logger.info(f"DATA_PATH: {Config.DATA_PATH}")
 logger.info(f"PROXY_LIST: {len(Config.PROXY_LIST)} proxies configured")
 logger.info(f"GEMINI_BALANCER_URL: {Config.GEMINI_BALANCER_URL or 'Not configured'}")
 logger.info(f"GEMINI_BALANCER_AUTH: {'Configured' if Config.GEMINI_BALANCER_AUTH else 'Not configured'}")
-logger.info(f"GEMINI_BALANCER_SYNC_ENABLED: {Config.parse_bool(Config.GEMINI_BALANCER_SYNC_ENABLED)}")
-logger.info(f"GPT_LOAD_SYNC_ENABLED: {Config.parse_bool(Config.GPT_LOAD_SYNC_ENABLED)}")
+logger.info(f"GEMINI_BALANCER_SYNC_ENABLED: {parse_bool(Config.GEMINI_BALANCER_SYNC_ENABLED)}")
+logger.info(f"GPT_LOAD_SYNC_ENABLED: {parse_bool(Config.GPT_LOAD_SYNC_ENABLED)}")
 logger.info(f"GPT_LOAD_URL: {Config.GPT_LOAD_URL or 'Not configured'}")
 logger.info(f"GPT_LOAD_AUTH: {'Configured' if Config.GPT_LOAD_AUTH else 'Not configured'}")
 logger.info(f"GPT_LOAD_GROUP_NAME: {Config.GPT_LOAD_GROUP_NAME or 'Not configured'}")
