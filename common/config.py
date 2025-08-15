@@ -57,6 +57,27 @@ class Config:
 
     # Gemini模型配置
     HAJIMI_CHECK_MODEL = os.getenv("HAJIMI_CHECK_MODEL", "gemini-2.5-flash")
+    
+    # 并发优化配置
+    ENABLE_WORK_STEALING = parse_bool(os.getenv("ENABLE_WORK_STEALING", "true"))
+    ENABLE_SMART_LOAD_BALANCING = parse_bool(os.getenv("ENABLE_SMART_LOAD_BALANCING", "true"))
+    ENABLE_BACKPRESSURE_CONTROL = parse_bool(os.getenv("ENABLE_BACKPRESSURE_CONTROL", "true"))
+    ENABLE_PRIORITY_QUEUE = parse_bool(os.getenv("ENABLE_PRIORITY_QUEUE", "true"))
+    
+    # Worker数量配置
+    MIN_FILE_WORKERS_PER_TOKEN = int(os.getenv("MIN_FILE_WORKERS_PER_TOKEN", "1"))
+    MAX_FILE_WORKERS_PER_TOKEN = int(os.getenv("MAX_FILE_WORKERS_PER_TOKEN", "3"))
+    MIN_VALIDATION_WORKERS = int(os.getenv("MIN_VALIDATION_WORKERS", "2"))
+    MAX_VALIDATION_WORKERS = int(os.getenv("MAX_VALIDATION_WORKERS", "8"))
+    
+    # 队列大小配置
+    FILE_QUEUE_SIZE = int(os.getenv("FILE_QUEUE_SIZE", "200"))
+    KEY_QUEUE_SIZE = int(os.getenv("KEY_QUEUE_SIZE", "100"))
+    
+    # 背压控制配置
+    GITHUB_QUOTA_WARNING_THRESHOLD = int(os.getenv("GITHUB_QUOTA_WARNING_THRESHOLD", "30"))
+    GITHUB_QUOTA_CRITICAL_THRESHOLD = int(os.getenv("GITHUB_QUOTA_CRITICAL_THRESHOLD", "10"))
+    RATE_LIMIT_BACKOFF_MULTIPLIER = float(os.getenv("RATE_LIMIT_BACKOFF_MULTIPLIER", "2.0"))
 
     # 文件路径黑名单配置
     FILE_PATH_BLACKLIST_STR = os.getenv("FILE_PATH_BLACKLIST", "readme,docs,doc/,.md,sample,tutorial")
@@ -176,6 +197,15 @@ logger.info(f"QUERIES_FILE: {Config.QUERIES_FILE}")
 logger.info(f"SCANNED_SHAS_FILE: {Config.SCANNED_SHAS_FILE}")
 logger.info(f"HAJIMI_CHECK_MODEL: {Config.HAJIMI_CHECK_MODEL}")
 logger.info(f"FILE_PATH_BLACKLIST: {len(Config.FILE_PATH_BLACKLIST)} items")
+logger.info(f"--- CONCURRENCY OPTIMIZATIONS ---")
+logger.info(f"ENABLE_WORK_STEALING: {Config.ENABLE_WORK_STEALING}")
+logger.info(f"ENABLE_SMART_LOAD_BALANCING: {Config.ENABLE_SMART_LOAD_BALANCING}")
+logger.info(f"ENABLE_BACKPRESSURE_CONTROL: {Config.ENABLE_BACKPRESSURE_CONTROL}")
+logger.info(f"ENABLE_PRIORITY_QUEUE: {Config.ENABLE_PRIORITY_QUEUE}")
+logger.info(f"FILE_WORKERS_RANGE: {Config.MIN_FILE_WORKERS_PER_TOKEN}-{Config.MAX_FILE_WORKERS_PER_TOKEN} per token")
+logger.info(f"VALIDATION_WORKERS_RANGE: {Config.MIN_VALIDATION_WORKERS}-{Config.MAX_VALIDATION_WORKERS}")
+logger.info(f"QUEUE_SIZES: File={Config.FILE_QUEUE_SIZE}, Key={Config.KEY_QUEUE_SIZE}")
+logger.info(f"QUOTA_THRESHOLDS: Warning={Config.GITHUB_QUOTA_WARNING_THRESHOLD}%, Critical={Config.GITHUB_QUOTA_CRITICAL_THRESHOLD}%")
 logger.info(f"*" * 30 + " CONFIG END " + "*" * 30)
 
 # 创建全局配置实例

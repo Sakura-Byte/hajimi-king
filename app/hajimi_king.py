@@ -12,7 +12,7 @@ from common.config import Config
 from utils.github_client import GitHubClient
 from utils.file_manager import file_manager, Checkpoint, checkpoint
 from utils.sync_utils import sync_utils
-from utils.async_processor import AsyncProcessor
+from utils.async_processor_optimized import OptimizedAsyncProcessor
 
 # 创建GitHub工具实例和文件管理器
 github_utils = GitHubClient.create_instance(Config.GITHUB_TOKENS)
@@ -113,12 +113,14 @@ async def async_main():
     else:
         logger.info(f"💾 No checkpoint - Full scan mode")
 
-    # 4. 创建并启动异步处理器
-    processor = AsyncProcessor(
-        max_file_workers=8,
-        max_validation_workers=5,
-        file_queue_size=100,
-        key_queue_size=50
+    # 4. 创建并启动优化的异步处理器
+    processor = OptimizedAsyncProcessor(
+        max_file_workers=Config.MAX_FILE_WORKERS_PER_TOKEN * len(Config.GITHUB_TOKENS),
+        max_validation_workers=Config.MAX_VALIDATION_WORKERS,
+        file_queue_size=Config.FILE_QUEUE_SIZE,
+        key_queue_size=Config.KEY_QUEUE_SIZE,
+        enable_work_stealing=Config.ENABLE_WORK_STEALING,
+        enable_smart_load_balancing=Config.ENABLE_SMART_LOAD_BALANCING
     )
     
     await processor.start()
@@ -181,10 +183,14 @@ async def async_main():
                     file_manager.update_dynamic_filenames()
                     
                     # 显示处理统计
-                    stats = processor.get_stats()
+                    stats = processor.get_optimized_stats()
                     queue_status = processor.get_queue_status()
-                    logger.info(f"📊 Progress - Queries: {total_queries_processed}, Files: {stats.files_downloaded}, Keys found: {stats.keys_extracted}, Valid: {stats.valid_keys}, Rate limited: {stats.rate_limited_keys}")
-                    logger.info(f"📦 Queue status - File queue: {queue_status['file_queue_size']}, Key queue: {queue_status['key_queue_size']}")
+                    logger.info(f"📊 Progress - Queries: {total_queries_processed}, Files: {stats['files_downloaded']}, Keys found: {stats['keys_extracted']}, Valid: {stats['valid_keys']}, Rate limited: {stats['rate_limited_keys']}")
+                    logger.info(f"📦 Queue status - File queue: {queue_status['file_queue']['current_size']}, Key queue: {queue_status['key_queue']['current_size']}")
+                    
+                    # 显示优化指标
+                    opt_metrics = stats.get('optimization_metrics', {})
+                    logger.info(f"🎯 Optimization - Backpressure: {opt_metrics.get('backpressure_level', 'UNKNOWN')}, GitHub health: {opt_metrics.get('github_health_score', 0):.2f}, Workers: F{opt_metrics.get('worker_counts', {}).get('file_workers', 0)}/V{opt_metrics.get('worker_counts', {}).get('validation_workers', 0)}")
 
                 # 短暂休息避免API限制
                 if query_count % 3 == 0:
@@ -197,25 +203,27 @@ async def async_main():
             file_manager.update_dynamic_filenames()
 
             # 显示循环结果
-            stats = processor.get_stats()
+            stats = processor.get_optimized_stats()
             logger.info(f"🏁 Loop #{loop_count} complete - Added {loop_tasks_added} tasks | Total stats:")
-            logger.info(f"   📊 Files processed: {stats.files_downloaded}, Keys found: {stats.keys_extracted}")
-            logger.info(f"   ✅ Valid keys: {stats.valid_keys}, ⚠️ Rate limited: {stats.rate_limited_keys}")
-            logger.info(f"   ❌ Errors: {stats.errors}")
+            logger.info(f"   📊 Files processed: {stats['files_downloaded']}, Keys found: {stats['keys_extracted']}")
+            logger.info(f"   ✅ Valid keys: {stats['valid_keys']}, ⚠️ Rate limited: {stats['rate_limited_keys']}")
+            logger.info(f"   ❌ Errors: {stats['errors']}")
 
             # 等待队列处理完成 (最多等待30秒)
             logger.info("⏳ Waiting for queues to process...")
             wait_time = 0
             while wait_time < 30:
                 queue_status = processor.get_queue_status()
-                if queue_status['file_queue_size'] == 0 and queue_status['key_queue_size'] == 0:
+                file_queue_size = queue_status['file_queue']['current_size']
+                key_queue_size = queue_status['key_queue']['current_size']
+                if file_queue_size == 0 and key_queue_size == 0:
                     break
                 await asyncio.sleep(1)
                 wait_time += 1
                 
                 # 每5秒显示一次队列状态
                 if wait_time % 5 == 0:
-                    logger.info(f"📦 Still processing - File queue: {queue_status['file_queue_size']}, Key queue: {queue_status['key_queue_size']}")
+                    logger.info(f"📦 Still processing - File queue: {file_queue_size}, Key queue: {key_queue_size}")
 
             logger.info(f"💤 Sleeping for 10 seconds before next loop...")
             await asyncio.sleep(10)
@@ -234,8 +242,24 @@ async def async_main():
         file_manager.save_checkpoint(checkpoint)
         
         # 最终统计
-        final_stats = processor.get_stats()
-        logger.info(f"📊 Final stats - Valid keys: {final_stats.valid_keys}, Rate limited: {final_stats.rate_limited_keys}")
+        final_stats = processor.get_optimized_stats()
+        logger.info(f"📊 Final stats - Valid keys: {final_stats['valid_keys']}, Rate limited: {final_stats['rate_limited_keys']}")
+        
+        # 显示优化效果总结
+        opt_metrics = final_stats.get('optimization_metrics', {})
+        logger.info(f"🎯 Optimization summary:")
+        logger.info(f"   Final backpressure level: {opt_metrics.get('backpressure_level', 'UNKNOWN')}")
+        logger.info(f"   GitHub health score: {opt_metrics.get('github_health_score', 0):.2f}")
+        logger.info(f"   Final worker count: {opt_metrics.get('worker_counts', {}).get('file_workers', 0)} file, {opt_metrics.get('worker_counts', {}).get('validation_workers', 0)} validation")
+        
+        # 显示高级统计（如果可用）
+        if 'work_stealing' in final_stats:
+            ws_stats = final_stats['work_stealing']['steal_stats']
+            logger.info(f"   Work stealing: {ws_stats['total_steals_successful']}/{ws_stats['total_steals_attempted']} successful")
+        
+        if 'load_balancing' in final_stats:
+            lb_stats = final_stats['load_balancing']['global_stats']
+            logger.info(f"   Load balancing: {lb_stats['failover_events']} failovers, {lb_stats['load_redistributions']} rebalances")
         logger.info("🔚 Shutting down sync utils...")
         sync_utils.shutdown()
 
