@@ -213,27 +213,36 @@ class OptimizedAsyncProcessor:
         return success
 
     async def _start_initial_workers(self):
-        """启动初始worker"""
-        # 启动文件处理worker
-        initial_file_workers = min(self.max_file_workers, len(self.quota_monitor.github_tokens) * 2)
-        for i in range(initial_file_workers):
-            await self._start_file_worker(f"file-worker-{i}")
+        """启动初始worker - 1个token对应1个worker"""
+        # 为每个GitHub token启动一个专属的文件处理worker
+        github_tokens = self.quota_monitor.github_tokens
+
+        logger.info(
+            f"🎯 Starting 1 worker per token strategy: {len(github_tokens)} tokens = {len(github_tokens)} workers"
+        )
+
+        for i, token in enumerate(github_tokens):
+            worker_id = f"file-worker-token-{token[:10]}"
+            await self._start_file_worker(worker_id, assigned_token=token)
+
+        logger.info(f"👷 Started {len(github_tokens)} file workers (1 per token)")
 
         # 启动验证worker
         for i in range(self.max_validation_workers):
             await self._start_validation_worker(f"validation-worker-{i}")
 
-    async def _start_file_worker(self, worker_id: str):
+    async def _start_file_worker(self, worker_id: str, assigned_token: str | None = None):
         """启动文件处理worker"""
         if self.work_stealing_scheduler:
-            # 使用工作窃取调度器
-            self.work_stealing_scheduler.register_worker(worker_id, TaskType.GITHUB_FILE)
+            # 使用工作窃取调度器，指定preferred_token
+            self.work_stealing_scheduler.register_worker(worker_id, TaskType.GITHUB_FILE, assigned_token)
 
-        worker_task = asyncio.create_task(self._file_worker_with_optimizations(worker_id))
+        worker_task = asyncio.create_task(self._file_worker_with_optimizations(worker_id, assigned_token))
         self.file_workers.append(worker_task)
         self.active_workers["file"] += 1
 
-        logger.debug(f"👷 Started file worker: {worker_id}")
+        token_display = assigned_token[:10] + "..." if assigned_token else "auto-assigned"
+        logger.info(f"👷 Started file worker: {worker_id} → Token: {token_display}")
 
     async def _start_validation_worker(self, worker_id: str):
         """启动验证worker"""
@@ -246,9 +255,10 @@ class OptimizedAsyncProcessor:
 
         logger.debug(f"🔐 Started validation worker: {worker_id}")
 
-    async def _file_worker_with_optimizations(self, worker_id: str):
+    async def _file_worker_with_optimizations(self, worker_id: str, assigned_token: str | None = None):
         """优化的文件处理worker"""
-        logger.info(f"👷 {worker_id} started with optimizations")
+        token_display = assigned_token[:10] + "..." if assigned_token else "auto"
+        logger.info(f"👷 {worker_id} started with optimizations (token: {token_display})")
 
         while not self.shutdown_event.is_set():
             try:
@@ -281,7 +291,7 @@ class OptimizedAsyncProcessor:
 
                 # 处理任务
                 start_time = time.time()
-                await self._process_file_task_optimized(task_data, worker_id)
+                await self._process_file_task_optimized(task_data, worker_id, assigned_token)
                 time.time() - start_time
 
                 # 记录完成
@@ -346,25 +356,33 @@ class OptimizedAsyncProcessor:
 
         logger.info(f"🔐 {worker_id} stopped")
 
-    async def _process_file_task_optimized(self, task_data: dict, worker_id: str):
+    async def _process_file_task_optimized(self, task_data: dict, worker_id: str, assigned_token: str | None = None):
         """优化的文件任务处理"""
         item = task_data["item"]
-        task_data["query"]
+        # query = task_data["query"]  # 保留以备将来使用，但当前未使用
 
         # 检查是否应该跳过
         if self._should_skip_item(item):
             return
 
-        # 获取最佳token（使用负载均衡器）
+        # 获取token - 优先使用分配的token
+        token = None
         token_decision = None
-        if self.load_balancer:
-            token_decision = await self.load_balancer.get_best_github_token(task_priority=5)
 
-        if not token_decision:
-            # Fallback到token manager
-            token = self.token_manager.get_best_github_token(task_priority=5)
+        if assigned_token:
+            # 使用分配的专属token
+            token = assigned_token
+            logger.debug(f"👷 {worker_id} using assigned token: {token[:10]}...")
         else:
-            token = token_decision.resource_id
+            # Fallback到负载均衡器选择
+            if self.load_balancer:
+                token_decision = await self.load_balancer.get_best_github_token(task_priority=5)
+                if token_decision:
+                    token = token_decision.resource_id
+
+            if not token:
+                # 最后fallback到token manager
+                token = self.token_manager.get_best_github_token(task_priority=5)
 
         if not token:
             logger.warning(f"🚫 {worker_id} no available token")
@@ -601,24 +619,38 @@ class OptimizedAsyncProcessor:
                 await asyncio.sleep(30)
 
     async def _adjust_worker_count(self):
-        """动态调整worker数量"""
+        """动态调整worker数量 - 1个token对应1个worker策略"""
         # 获取推荐的worker数量
         recommended_github = self.quota_monitor.get_recommended_github_workers()
         recommended_gemini = self.quota_monitor.get_recommended_gemini_workers()
 
+        # 限制文件worker数量不超过token数量
+        max_github_workers = len(self.quota_monitor.github_tokens)
+        recommended_github = min(recommended_github, max_github_workers)
+
         # 调整文件worker数量
         current_file_workers = len(self.file_workers)
-        if recommended_github > current_file_workers and recommended_github <= self.max_file_workers:
-            # 增加worker
-            for i in range(recommended_github - current_file_workers):
-                worker_id = f"file-worker-dynamic-{int(time.time())}-{i}"
-                await self._start_file_worker(worker_id)
-                logger.info(f"📈 Added file worker: {worker_id}")
+        if recommended_github > current_file_workers:
+            # 增加worker (但不能超过token数量)
+            workers_to_add = min(recommended_github - current_file_workers, max_github_workers - current_file_workers)
+
+            if workers_to_add > 0:
+                # 获取未被使用的tokens (如果有的话)
+                available_tokens = self.quota_monitor.github_tokens.copy()
+
+                for i in range(workers_to_add):
+                    # 为动态worker分配最佳可用token
+                    token = self.token_manager.get_best_github_token(task_priority=5) if available_tokens else None
+                    worker_id = f"file-worker-dynamic-{int(time.time())}-{i}"
+                    await self._start_file_worker(worker_id, assigned_token=token)
+                    logger.info(f"📈 Added file worker: {worker_id} (token: {token[:10] + '...' if token else 'none'})")
 
         elif recommended_github < current_file_workers:
             # 减少worker (通过不启动新任务自然减少)
             excess_workers = current_file_workers - recommended_github
-            logger.info(f"📉 Will naturally reduce {excess_workers} file workers")
+            logger.info(
+                f"📉 Will naturally reduce {excess_workers} file workers (current: {current_file_workers}, target: {recommended_github})"
+            )
 
         # 调整验证worker数量
         current_validation_workers = len(self.validation_workers)

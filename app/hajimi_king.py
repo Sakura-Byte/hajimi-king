@@ -113,7 +113,7 @@ async def async_main():
 
     # 4. 创建并启动优化的异步处理器
     processor = OptimizedAsyncProcessor(
-        max_file_workers=Config.MAX_FILE_WORKERS_PER_TOKEN * len(Config.GITHUB_TOKENS),
+        max_file_workers=len(Config.GITHUB_TOKENS),  # 限制为token数量，1个token对应1个worker
         max_validation_workers=Config.MAX_VALIDATION_WORKERS,
         file_queue_size=Config.FILE_QUEUE_SIZE,
         key_queue_size=Config.KEY_QUEUE_SIZE,
